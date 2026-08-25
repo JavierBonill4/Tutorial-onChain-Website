@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Store a website inside a Solana account, then publish an IPFS pointer on-chain. Ten checkpoints, hints, and solutions." />
+<title>Website In An Account</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500;700&display=swap" />
+</head>
+<body>
+<style>
+/* ============================================================
+   Tokens — complete light palette on bare :root
+   ============================================================ */
+:root {
+  --ground:       #FAF8FE;
+  --surface:      #FFFFFF;
+  --surface-sunk: #F4EFFD;
+  --line:         #E7DEF7;
+  --line-strong:  #D3C4F0;
+
+  --ink:          #251C36;
+  --ink-soft:     #4A3F60;
+  --dim:          #6E6285;
+
+  --purple:       #7C3AED;
+  --purple-deep:  #5B21B6;
+  --purple-wash:  #F1EBFE;
+
+  --green:        #059669;
+  --green-bright: #14F195;
+  --green-wash:   #E4FBF1;
+
+  --amber:        #B45309;
+  --amber-wash:   #FEF3E2;
+
+  --code-bg:      #241B33;
+  --code-ink:     #EDE6FA;
+  --code-dim:     #9C8DBB;
+
+  --shadow: 0 1px 2px rgba(37,28,54,.05), 0 8px 24px -12px rgba(91,33,182,.18);
+
+  --step--1: .8125rem;
+  --step-0:  1.0625rem;
+  --step-1:  1.35rem;
+  --step-2:  1.75rem;
+  --step-3:  2.4rem;
+  --step-4:  3.4rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:       #141021;
+    --surface:      #1C1630;
+    --surface-sunk: #241C3C;
+    --line:         #322748;
+    --line-strong:  #453563;
+
+    --ink:          #EFE9FA;
+    --ink-soft:     #CFC4E6;
+    --dim:          #A091BE;
+
+    --purple:       #A78BFA;
+    --purple-deep:  #C4B5FD;
+    --purple-wash:  #271D42;
+
+    --green:        #34D399;
+    --green-bright: #14F195;
+    --green-wash:   #10301F;
+
+    --amber:        #FBBF24;
+    --amber-wash:   #33240C;
+
+    --code-bg:      #0E0A19;
+    --code-ink:     #E6DFF5;
+    --code-dim:     #8879A8;
+
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground:       #141021;
+  --surface:      #1C1630;
+  --surface-sunk: #241C3C;
+  --line:         #322748;
+  --line-strong:  #453563;
+
+  --ink:          #EFE9FA;
+  --ink-soft:     #CFC4E6;
+  --dim:          #A091BE;
+
+  --purple:       #A78BFA;
+  --purple-deep:  #C4B5FD;
+  --purple-wash:  #271D42;
+
+  --green:        #34D399;
+  --green-bright: #14F195;
+  --green-wash:   #10301F;
+
+  --amber:        #FBBF24;
+  --amber-wash:   #33240C;
+
+  --code-bg:      #0E0A19;
+  --code-ink:     #E6DFF5;
+  --code-dim:     #8879A8;
+
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; }
+body, h1, h2, h3, h4, p, ul, ol, li, figure, pre, dl, dd { margin: 0; padding: 0; }
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: "Source Serif 4", ui-serif, Georgia, serif;
+  font-size: var(--step-0);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, .u-sans {
+  font-family: "Familjen Grotesk", ui-sans-serif, system-ui, sans-serif;
+  text-wrap: balance;
+  letter-spacing: -.015em;
+}
+
+code, kbd, pre, .u-mono {
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  font-variant-ligatures: none;
+}
+
+a { color: var(--purple-deep); text-decoration-thickness: 1px; text-underline-offset: .17em; }
+a:hover { color: var(--purple); }
+
+:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* ============================================================
+   Shell
+   ============================================================ */
+.shell {
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 0 1.5rem 6rem;
+  display: grid;
+  grid-template-columns: 16.5rem minmax(0, 1fr);
+  gap: 3.5rem;
+  align-items: start;
+}
+
+@media (max-width: 62rem) {
+  .shell { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .rail { display: none; }
+}
+
+/* ============================================================
+   Masthead
+   ============================================================ */
+.masthead {
+  border-bottom: 1px solid var(--line);
+  background:
+    radial-gradient(120% 140% at 12% -10%, var(--purple-wash) 0%, transparent 58%),
+    var(--ground);
+}
+.masthead-inner {
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 3.5rem 1.5rem 2.75rem;
+}
+
+.kicker {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: var(--step--1);
+  font-weight: 500;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--purple-deep);
+  margin-bottom: 1.4rem;
+}
+.kicker::before {
+  content: "";
+  width: 2.25rem; height: 3px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--purple) 0%, var(--green-bright) 100%);
+}
+
+.masthead h1 {
+  font-size: var(--step-4);
+  font-weight: 700;
+  line-height: 1.02;
+  max-width: 18ch;
+  margin-bottom: 1.1rem;
+}
+.masthead h1 em {
+  font-style: normal;
+  color: var(--purple);
+}
+
+.standfirst {
+  font-size: var(--step-1);
+  line-height: 1.5;
+  color: var(--ink-soft);
+  max-width: 54ch;
+  margin-bottom: 2rem;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 2.5rem;
+  row-gap: 1.1rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid var(--line);
+}
+.fact { display: flex; flex-direction: column; gap: .18rem; }
+.fact dt {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .72rem; font-weight: 500;
+  letter-spacing: .11em; text-transform: uppercase;
+  color: var(--dim);
+}
+.fact dd {
+  font-family: "Familjen Grotesk", ui-sans-serif, sans-serif;
+  font-size: 1.05rem; font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   Rail — the progress spine
+   ============================================================ */
+.rail {
+  position: sticky;
+  top: 2rem;
+  padding-top: 3.5rem;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+}
+.rail-title {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .72rem; font-weight: 500;
+  letter-spacing: .11em; text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 1.1rem;
+}
+.spine { list-style: none; position: relative; }
+.spine::before {
+  content: "";
+  position: absolute;
+  left: .6rem; top: .55rem; bottom: .9rem;
+  width: 2px;
+  background: var(--line);
+  border-radius: 2px;
+}
+.spine li { position: relative; }
+.spine a {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  gap: .7rem;
+  align-items: baseline;
+  padding: .3rem 0;
+  font-family: "Familjen Grotesk", ui-sans-serif, sans-serif;
+  font-size: .875rem;
+  line-height: 1.35;
+  color: var(--dim);
+  text-decoration: none;
+}
+.spine a:hover { color: var(--ink); }
+.spine a[aria-current="true"] { color: var(--purple-deep); font-weight: 600; }
+
+.node {
+  position: relative;
+  z-index: 1;
+  width: 1.25rem; height: 1.25rem;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--line-strong);
+  display: grid; place-items: center;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .6rem; font-weight: 700;
+  color: var(--dim);
+  transition: background .18s, border-color .18s, color .18s;
+}
+.spine a[aria-current="true"] .node { border-color: var(--purple); color: var(--purple); }
+.spine li.is-done .node {
+  background: var(--green-bright);
+  border-color: var(--green-bright);
+  color: #06281B;
+}
+.spine li.is-done a { color: var(--ink-soft); }
+
+.rail-foot {
+  margin-top: 1.6rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--line);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .72rem;
+  color: var(--dim);
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+  align-items: flex-start;
+}
+.reset {
+  font: inherit;
+  background: none; border: 0; padding: 0;
+  color: var(--dim);
+  text-decoration: underline;
+  text-underline-offset: .2em;
+  cursor: pointer;
+}
+.reset:hover { color: var(--purple); }
+
+/* ============================================================
+   Article
+   ============================================================ */
+.doc { padding-top: 3.5rem; max-width: 44rem; }
+.doc > * + * { margin-top: 1.15rem; }
+
+.doc p { max-width: 68ch; }
+.doc h2 { font-size: var(--step-3); font-weight: 700; line-height: 1.1; }
+.doc h3 { font-size: var(--step-1); font-weight: 600; margin-top: 2.25rem; }
+.doc h4 {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .74rem; font-weight: 700;
+  letter-spacing: .11em; text-transform: uppercase;
+  color: var(--dim);
+  margin-top: 2rem;
+}
+
+.doc ul, .doc ol { padding-left: 1.3rem; max-width: 68ch; display: flex; flex-direction: column; gap: .5rem; }
+.doc li::marker { color: var(--purple); }
+.doc ol li::marker { font-family: "JetBrains Mono", monospace; font-size: .85em; }
+
+.doc strong { font-weight: 600; color: var(--ink); }
+
+:not(pre) > code {
+  background: var(--purple-wash);
+  color: var(--purple-deep);
+  padding: .1em .38em;
+  border-radius: 4px;
+  font-size: .855em;
+  border: 1px solid var(--line);
+}
+
+/* Checkpoint blocks ------------------------------------------------ */
+.cp {
+  scroll-margin-top: 1.5rem;
+  padding-top: 3.25rem;
+  border-top: 1px solid var(--line);
+  margin-top: 3.25rem;
+}
+.cp:first-of-type { border-top: 0; margin-top: 0; padding-top: 1rem; }
+
+.cp-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.cp-num {
+  flex: none;
+  margin-top: .35rem;
+  width: 2.55rem; height: 2.55rem;
+  border-radius: .8rem;
+  display: grid; place-items: center;
+  background: var(--purple-wash);
+  border: 1px solid var(--line-strong);
+  color: var(--purple-deep);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-weight: 700; font-size: .95rem;
+  font-variant-numeric: tabular-nums;
+}
+.cp-titles { display: flex; flex-direction: column; gap: .3rem; }
+.cp-eyebrow {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .7rem; font-weight: 500;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: var(--dim);
+}
+.cp h2 { font-size: var(--step-2); }
+
+/* the "done" toggle */
+.done-row {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  margin-top: 1.75rem;
+  padding: .7rem .95rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: .7rem;
+  background: var(--surface-sunk);
+  width: fit-content;
+  cursor: pointer;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .78rem;
+  color: var(--dim);
+  user-select: none;
+  transition: border-color .18s, background .18s, color .18s;
+}
+.done-row:hover { border-color: var(--purple); color: var(--ink-soft); }
+.done-row input { accent-color: var(--green); width: 1rem; height: 1rem; cursor: pointer; }
+.done-row:has(input:checked) {
+  background: var(--green-wash);
+  border-style: solid;
+  border-color: var(--green);
+  color: var(--green);
+}
+
+/* Callouts --------------------------------------------------------- */
+.note {
+  border-left: 3px solid var(--purple);
+  background: var(--purple-wash);
+  border-radius: 0 .6rem .6rem 0;
+  padding: .95rem 1.15rem;
+  font-size: .96rem;
+  color: var(--ink-soft);
+}
+.note.warn { border-left-color: var(--amber); background: var(--amber-wash); }
+.note.win  { border-left-color: var(--green); background: var(--green-wash); }
+.note-label {
+  display: block;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .69rem; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase;
+  margin-bottom: .3rem;
+  color: var(--purple-deep);
+}
+.note.warn .note-label { color: var(--amber); }
+.note.win  .note-label { color: var(--green); }
+
+/* Code ------------------------------------------------------------- */
+pre {
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border-radius: .75rem;
+  padding: 1.05rem 1.2rem;
+  overflow-x: auto;
+  font-size: .83rem;
+  line-height: 1.6;
+  border: 1px solid var(--line-strong);
+}
+pre code { background: none; border: 0; padding: 0; color: inherit; font-size: inherit; }
+.c-com { color: var(--code-dim); font-style: italic; }
+.c-key { color: #C4B5FD; }
+.c-str { color: var(--green-bright); }
+.c-fn  { color: #FDE68A; }
+.c-num { color: #F9A8D4; }
+
+/* Disclosure ------------------------------------------------------- */
+details {
+  border: 1px solid var(--line);
+  border-radius: .75rem;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+details + details { margin-top: .7rem; }
+summary {
+  cursor: pointer;
+  list-style: none;
+  padding: .85rem 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  font-family: "Familjen Grotesk", ui-sans-serif, sans-serif;
+  font-weight: 600;
+  font-size: .96rem;
+  color: var(--ink);
+}
+summary::-webkit-details-marker { display: none; }
+summary::after {
+  content: "+";
+  margin-left: auto;
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 400;
+  font-size: 1.15rem;
+  color: var(--dim);
+  transition: transform .2s;
+}
+details[open] summary::after { content: "−"; }
+summary:hover { background: var(--surface-sunk); }
+.tag {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .63rem; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+  padding: .22rem .5rem;
+  border-radius: 4px;
+  background: var(--purple-wash);
+  color: var(--purple-deep);
+  border: 1px solid var(--line-strong);
+}
+.tag.sol { background: var(--green-wash); color: var(--green); border-color: var(--green); }
+.d-body { padding: 0 1.1rem 1.1rem; }
+.d-body > * + * { margin-top: .85rem; }
+.d-body p, .d-body ul, .d-body ol { font-size: .96rem; }
+
+/* Spec table ------------------------------------------------------- */
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: .75rem; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+th, td { padding: .6rem .9rem; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+tbody tr:last-child td { border-bottom: 0; }
+th {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .68rem; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--dim);
+  background: var(--surface-sunk);
+  white-space: nowrap;
+}
+td.num { font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Limits grid ------------------------------------------------------ */
+.limits { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: .9rem; }
+.limit {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: .8rem;
+  padding: 1rem 1.1rem;
+  box-shadow: var(--shadow);
+}
+.limit b {
+  display: block;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 1.35rem; font-weight: 700;
+  color: var(--purple);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  margin-bottom: .3rem;
+}
+.limit span { font-size: .87rem; color: var(--dim); display: block; }
+
+/* Footer ----------------------------------------------------------- */
+.foot {
+  border-top: 1px solid var(--line);
+  margin-top: 4rem;
+  padding-top: 1.6rem;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .76rem;
+  color: var(--dim);
+  max-width: 44rem;
+}
+</style>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <p class="kicker">Solana Course · Assignment 04</p>
+    <h1>Put a website <em>inside</em> a Solana account.</h1>
+    <p class="standfirst">
+      No IPFS. No web host. You will store the bytes of a real webpage in program-owned
+      state, seal it, and serve it back out of a validator — then do it the way the
+      industry actually does it, and argue about which is better.
+    </p>
+    <dl class="facts">
+      <div class="fact"><dt>Level</dt><dd>Intermediate</dd></div>
+      <div class="fact"><dt>Time</dt><dd>3–5 hours</dd></div>
+      <div class="fact"><dt>Stack</dt><dd>Anchor · Rust · TS</dd></div>
+      <div class="fact"><dt>Network</dt><dd>Devnet</dd></div>
+      <div class="fact"><dt>Checkpoints</dt><dd>10</dd></div>
+    </dl>
+  </div>
+</header>
+
+<div class="shell">
+
+  <nav class="rail" aria-label="Checkpoints">
+    <p class="rail-title">Progress</p>
+    <ol class="spine" id="spine">
+      <li><a href="#cp0"><span class="node">0</span><span>Environment</span></a></li>
+      <li><a href="#cp1"><span class="node">1</span><span>Grow the account</span></a></li>
+      <li><a href="#cp2"><span class="node">2</span><span>Write the chunks</span></a></li>
+      <li><a href="#cp3"><span class="node">3</span><span>Seal it</span></a></li>
+      <li><a href="#cp4"><span class="node">4</span><span>Prove it on-chain</span></a></li>
+      <li><a href="#cp5"><span class="node">5</span><span>Reclaim the rent</span></a></li>
+      <li><a href="#cp6"><span class="node">6</span><span>Build your page</span></a></li>
+      <li><a href="#cp7"><span class="node">7</span><span>Ship to devnet</span></a></li>
+      <li><a href="#cp8"><span class="node">8</span><span>The pointer</span></a></li>
+      <li><a href="#cp9"><span class="node">9</span><span>Writeup &amp; submit</span></a></li>
+      <li><a href="#solutions"><span class="node">S</span><span>Solutions</span></a></li>
+      <li><a href="#trouble"><span class="node">?</span><span>Troubleshooting</span></a></li>
+    </ol>
+    <div class="rail-foot">
+      <span id="tally">0 of 10 done</span>
+      <button class="reset" id="reset" type="button">Reset progress</button>
+    </div>
+  </nav>
+
+  <article class="doc">
+
+    <!-- ============ INTRO ============ -->
+    <section>
+      <h3 style="margin-top:0">Why this assignment exists</h3>
+      <p>
+        Storing a website on-chain is not what you would ship. That is the point.
+        Doing it drives you head-first into account allocation limits, <code>realloc</code>,
+        rent, transaction size, and the BPF heap — the constraints you normally
+        engineer around without ever seeing them.
+      </p>
+      <p>
+        By the end you will have hit every one of them personally, and you will be able
+        to argue from experience about when data belongs on-chain and when a pointer does.
+        That argument is the actual deliverable. The website is just how you earn it.
+      </p>
+
+      <h4>The four walls you will hit</h4>
+      <div class="limits">
+        <div class="limit"><b>10,240</b><span>Max bytes for an account created through a CPI. Anchor's <code>init</code> is a CPI.</span></div>
+        <div class="limit"><b>10,240</b><span>Max bytes a program can add to an account per instruction.</span></div>
+        <div class="limit"><b>1,232</b><span>Max bytes in a transaction — signatures, keys, and all.</span></div>
+        <div class="limit"><b>32 KB</b><span>The BPF heap. Deserialize a big payload into it and you die.</span></div>
+      </div>
+      <p style="color:var(--dim);font-size:.94rem">
+        Every awkward design decision in the starter program traces back to one of these
+        four numbers. When something feels convoluted, ask which wall it is dodging.
+      </p>
+    </section>
+
+    <!-- ============ CP 0 ============ -->
+    <section class="cp" id="cp0">
+      <div class="cp-head">
+        <span class="cp-num">00</span>
+        <div class="cp-titles">
+          <span class="cp-eyebrow">Setup</span>
+          <h2>Environment</h2>
+        </div>
+      </div>
+
+      <p>
+        Get the toolchain current before you write a line of Rust. Most first-day
+        failures in this assignment are toolchain age, not code.
+      </p>
+
+<pre><code><span class="c-com"># toolchain</span>
+rustup update stable
+sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
+cargo install --git https://github.com/solana-foundation/anchor avm --force
+avm install 0.31.1 &amp;&amp; avm use 0.31.1
+
+<span class="c-com"># a funded devnet wallet</span>
+solana-keygen new
+solana config set --url devnet
+solana address <span class="c-com"># this will print out your public address, go to https://faucet.solana.com/ and airdrop solana to printed address</span></code></pre>
+solana balance ADDRESS_FROM_ABOVE <span class="c-com"># to confirm your address</span></code></pre>
+<span class="c-com"># the repo</span>
+npm install
+anchor keys sync
+anchor build
+anchor test   <span class="c-com"># most tests fail — that is your worklist</span></code></pre>
+
+      <div class="note warn">
+        <span class="note-label">Do this now, not later</span>
+        Sign up for a free RPC endpoint (Helius, QuickNode, Triton) and keep the devnet
+        URL handy. The public endpoint rate-limits hard and will drop you with a 429
+        halfway through an upload, where it looks exactly like a bug in your program.
+        Every script here takes <code>--rpc=&lt;url&gt;</code>.
+      </div>
+
+      <p>
+        Open <code>programs/onchain-site/src/lib.rs</code>. <code>initialize</code> is written
+        out for you as a worked example — read it before you start. Six <code>todo!()</code>
+        stubs follow it, and <code>tests/onchain-site.ts</code> is the spec: every test names
+        the checkpoint it belongs to.
+      </p>
+
+      <h4>The account layout</h4>
+      <p>
+        Bytes 0–128 are a fixed header. Everything after byte 128 is the website itself.
+        Do not move these fields — the gateway and the grader read them at fixed offsets.
+      </p>
+
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Bytes</th><th>Field</th><th>Why it exists</th></tr></thead>
+          <tbody>
+            <tr><td class="num">0–8</td><td class="num">discriminator</td><td>Anchor's account type tag</td></tr>
+            <tr><td class="num">8–40</td><td class="num">authority</td><td>Who may write and close</td></tr>
+            <tr><td class="num">40–72</td><td class="num">name</td><td>PDA seed, so one wallet can host many sites</td></tr>
+            <tr><td class="num">72–104</td><td class="num">content_hash</td><td>sha256, committed <em>before</em> upload</td></tr>
+            <tr><td class="num">104–108</td><td class="num">total_len</td><td>Target payload size</td></tr>
+            <tr><td class="num">108–112</td><td class="num">written_len</td><td>High-water mark of bytes written</td></tr>
+            <tr><td class="num">112</td><td class="num">encoding</td><td>0 raw, 1 gzip</td></tr>
+            <tr><td class="num">114</td><td class="num">finalized</td><td>Sealed flag</td></tr>
+            <tr><td class="num">128+</td><td class="num">payload</td><td>Your page</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <label class="done-row"><input type="checkbox" data-cp="0" /> Mark checkpoint 0 complete</label>
+    </section>
+
+    <!-- ============ CP 1 ============ -->
+    <section class="cp" id="cp1">
+      <div class="cp-head">
+        <span class="cp-num">01</span>
+        <div class="cp-titles">
+          <span class="cp-eyebrow">TODO 1 · grow</span>
+          <h2>Grow the account</h2>
+        </div>
+      </div>
+
+      <p>
+        <strong>What this does.</strong> <code>initialize</code> created your PDA with exactly
+        128 bytes — just the header, no room for a page. This instruction stretches it
+        toward its full size, one call at a time.
+      </p>
+      <p>
+        <strong>Why it is not one call.</strong> A program may only extend an account by
+        <code>MAX_PERMITTED_DATA_INCREASE</code> — 10,240 bytes — per instruction. A 30 KB page
+        therefore needs three separate transactions before a single byte of content can
+        land. Your job is to make one step of that walk correct and repeatable.
+      </p>
+      <p>
+        <strong>The part everyone forgets.</strong> Rent exemption is calculated from the
+        account's <em>size</em>. Make the account bigger without adding lamports and it quietly
+        stops being rent exempt. You must top it up from <code>payer</code> before you resize.
+      </p>
+
+      <h4>Requirements</h4>
+      <ol>
+        <li>Target size is <code>HEADER_LEN + site.total_len</code>.</li>
+        <li>If the account is already that big, fail with <code>AlreadyFullSize</code>.</li>
+        <li>New size is <code>min(target, current + MAX_PERMITTED_DATA_INCREASE)</code>.</li>
+        <li>Transfer any rent shortfall from <code>payer</code> to the site account.</li>
+        <li>Resize.</li>
+      </ol>
+
+      <details>
+        <summary><span class="tag">Hint</span> The borrow checker will fight you</summary>
+        <div class="d-body">
+          <p>
+            Read <code>total_len</code> off the deserialized account <em>first</em>, then take the
+            <code>AccountInfo</code>. If you hold a mutable borrow of
+            <code>ctx.accounts.site</code> and then call <code>.to_account_info()</code> on it,
+            Rust will refuse — and the error will point somewhere unhelpful.
+          </p>
+<pre><code><span class="c-key">let</span> target = HEADER_LEN + ctx.accounts.site.total_len <span class="c-key">as</span> usize;
+<span class="c-key">let</span> info = ctx.accounts.site.<span class="c-fn">to_account_info</span>();
+<span class="c-key">let</span> current = info.<span class="c-fn">data_len</span>();</code></pre>
+        </div>
+      </details>
+
+      <details>
+        <summary><span class="tag">Hint</span> Working out the rent shortfall</summary>
+        <div class="d-body">
+          <p>
+            <code>Rent::get()?.minimum_balance(new_len)</code> tells you what the account needs
+            to hold at the new size. Compare it against <code>info.lamports()</code> and move the
+            difference with <code>system_instruction::transfer</code> through <code>invoke</code>.
+            Only transfer if there is actually a shortfall — an unconditional transfer of zero
+            is a wasted CPI.
+          </p>
+        </div>
+      </details>
+
+      <details>
+        <summary><span class="tag">Hint</span> Which method actually resizes</summary>
+        <div class="d-body">
+          <p>
+            <code>info.resize(new_len)?</code>. You may see <code>realloc(new_len, zero_init)</code>
+            in older tutorials; it still works but is deprecated in current versions.
+          </p>
+        </div>
+      </details>
+
+      <div class="note">
+        <span class="note-label">Check yourself</span>
+        Three tests turn green: the account reaches its target size, it stays rent exempt
+        after growing, and a fourth <code>grow</code> call on a full account is rejected.
+      </div>
+
+      <label class="done-row"><input type="checkbox" data-cp="1" /> Mark checkpoint 1 complete</label>
+    </section>
+
+    <!-- ============ CP 2 ============ -->
+    <section class="cp" id="cp2">
+      <div class="cp-head">
+        <span class="cp-num">02</span>
+        <div class="cp-titles">
+          <span class="cp-eyebrow">TODO 2 · write_chunk</span>
+          <h2>Write the chunks</h2>
+        </div>
+      </div>
+
+      <p>
+        <strong>What this does.</strong> Copies one slice of your file into the account at a
+        byte offset. Called once per slice until the whole page is in place.
+      </p>
+      <p>
+        <strong>Why chunks.</strong> A Solana transaction is capped at 1,232 bytes <em>total</em>.
+        After a signature (65), the message header (3), the account keys (~129), a blockhash (32)
+        and the instruction envelope, you have a little under 1,000 bytes of room. The client
+        uses 880-byte slices to keep margin. A 6 KB page is 8 transactions; a 24 KB page is 28.
+      </p>
+      <p>
+        <strong>Order does not matter.</strong> The uploader fires six chunks at a time and
+        retries failures, so chunk 7 may land before chunk 3. Write to the offset you are
+        given and track a high-water mark — never assume you are appending.
+      </p>
+
+      <div class="note warn">
+        <span class="note-label">The 32 KB trap</span>
+        Do not add the payload to the <code>Site</code> struct as a <code>Vec&lt;u8&gt;</code>.
+        Borsh would deserialize the entire page into the BPF heap, which is only 32 KB, and
+        your program would work perfectly on test fixtures and die on a real page. Write to
+        the raw account bytes instead and memory use stays flat at any size.
+      </div>
+
+      <h4>Requirements</h4>
+      <ol>
+        <li>Reject if the site is finalized — <code>AlreadyFinalized</code>.</li>
+        <li>Reject an empty chunk — <code>EmptyChunk</code>.</li>
+        <li>Compute <code>end = offset + data.len()</code> with checked arithmetic.</li>
+        <li>Reject if <code>end &gt; total_len</code> — <code>OutOfBounds</code>.</li>
+        <li>Reject if <code>HEADER_LEN + end</code> is past the current account size — <code>NotGrownYet</code>.</li>
+        <li>Copy the bytes in at <code>HEADER_LEN + offset</code>.</li>
+        <li>Raise <code>written_len</code> to <code>end</code> if <code>end</code> is larger.</li>
+      </ol>
+
+      <details>
+        <summary><span class="tag">Hint</span> Writing to raw account bytes</summary>
+        <div class="d-body">
+<pre><code><span class="c-key">let</span> info = ctx.accounts.site.<span class="c-fn">to_account_info</span>();
+{
+    <span class="c-key">let</span> <span class="c-key">mut</span> raw = info.<span class="c-fn">try_borrow_mut_data</span>()?;
+    raw[HEADER_LEN + start..HEADER_LEN + end].<span class="c-fn">copy_from_slice</span>(&amp;data);
+}</code></pre>
+          <p>
+            Keep the borrow inside its own block. Anchor writes the header back when the
+            instruction exits, and a borrow still held at that moment will panic at runtime
+            rather than fail to compile.
+          </p>
+        </div>
+      </details>
+
+      <details>
+        <summary><span class="tag">Hint</span> The off-by-128 that costs an hour</summary>
+        <div class="d-body">
+          <p>
+            Every offset the client sends is relative to the <em>payload</em>, not the account.
+            Writing at <code>offset</code> instead of <code>HEADER_LEN + offset</code> looks
+            completely successful — every transaction confirms — and then the hash check fails
+            and the page renders as garbage. If checkpoint 4 fails and you cannot see why, this
+            is the first thing to check.
+          </p>
+        </div>
+      </details>
+
+      <div class="note">
+        <span class="note-label">Check yourself</span>
+        Bounds and empty-chunk rejections pass, <code>written_len</code> equals
+        <code>total_len</code> after a full upload, and the round-trip test decompresses the
+        account back to a byte-identical copy of the source file.
+      </div>
+
+      <label class="done-row"><input type="checkbox" data-cp="2" /> Mark checkpoint 2 complete</label>
+    </section>
+
+    <!-- ============ CP 3 ============ -->
+    <section class="cp" id="cp3">
+      <div class="cp-head">
+        <span class="cp-num">03</span>
+        <div class="cp-titles">
+          <span class="cp-eyebrow">TODO 3 · finalize</span>
+          <h2>Seal it</h2>
+        </div>
+      </div>
+
+      <p>
+        <strong>What this does.</strong> Flips the account from "under construction" to
+        "done", permanently. After this, <code>write_chunk</code> must fail.
+      </p>
+      <p>
+        <strong>Why bother.</strong> Without a seal, your site is a mutable blob that its
+        author can rewrite at any moment — which means a reader can never be sure the bytes
+        they verified are the bytes that will be there tomorrow. Sealing converts the account
+        from storage into an artifact. That single boolean is most of what makes the on-chain
+        version interesting compared to a hosted file.
+      </p>
+
+      <h4>Requirements</h4>
+      <ol>
+        <li>Reject if already finalized.</li>
+        <li>Reject unless <code>written_len == total_len</code> — <code>IncompleteUpload</code>.</li>
+        <li>Set <code>finalized = true</code>.</li>
+      </ol>
+
+      <details>
+        <summary><span class="tag">Hint</span> Why the completeness check matters</summary>
+        <div class="d-body">
+          <p>
+            <code>written_len</code> is a high-water mark, not a count. If chunk 5 of 8 gets
+            dropped, the mark still climbs when chunks 6, 7, and 8 land, and you end up with a
+            hole in the middle of the file. Requiring <code>written_len == total_len</code>
+            only catches a short upload, not a gap — which is exactly why the hash check in
+            checkpoint 4 exists. Sealing is necessary; it is not sufficient.
+          </p>
+        </div>
+      </details>
+
+      <label class="done-row"><input type="checkbox" data-cp="3" /> Mark checkpoint 3 complete</label>
+    </section>
+
+    <!-- ============ CP 4 ============ -->
+    <section class="cp" id="cp4">
+      <div class="cp-head">
+        <span class="cp-num">04</span>
+        <div class="cp-titles">
+          <span class="cp-eyebrow">TODO 4 · verify</span>
+          <h2>Prove it on-chain</h2>
+        </div>
+      </div>
+
+      <p>
+        <strong>What this does.</strong> Recomputes sha256 over the bytes actually stored in
+        the account and compares it to the hash <code>initialize</code> committed before the
+        upload began.
+      </p>
+      <p>
+        <strong>Why the ordering is the whole trick.</strong> The hash goes on-chain
+        <em>first</em>, when the account is still empty. That means the uploader cannot decide
+        after the fact what the "correct" content was. A passing <code>verify</code> is proof
+        that the chain holds exactly the file that was promised — not merely that it holds a
+        file whose hash matches itself.
+      </p>
+      <p>
+        This is the same commit-then-prove shape you will see everywhere in the ecosystem.
+        Commit to a value cheaply, reveal later, let anyone check.
+      </p>
+
+      <h4>Requirements</h4>
+      <ol>
+        <li>Slice the payload out of the raw data: <code>HEADER_LEN..HEADER_LEN + total_len</code>.</li>
+        <li>Hash it and compare against <code>site.content_hash</code>.</li>
+        <li>Fail with <code>HashMismatch</code> if they differ.</li>
+      </ol>
+
+      <div class="note warn">
+        <span class="note-label">Expect an out-of-compute error first</span>
+        Hashing tens of kilobytes costs far more than the 200,000 CU default. The provided
+        client already sends a <code>ComputeBudgetProgram.setComputeUnitLimit</code>
+        instruction alongside this one. If you write your own client, you need one too — and
+        if you see "exceeded CUs", that is what it means, not a bug in your logic.
+      </div>
+
+      <details>
+        <summary><span class="tag">Hint</span> Getting the payload slice</summary>
+        <div class="d-body">
+<pre><code><span class="c-key">let</span> info = site.<span class="c-fn">to_account_info</span>();
+<span class="c-key">let</span> raw = info.<span class="c-fn">try_borrow_data</span>()?;
+<span class="c-key">let</span> payload = &amp;raw[HEADER_LEN..HEADER_LEN + site.total_len <span class="c-key">as</span> usize];
+<span class="c-key">let</span> computed = <span class="c-fn">hash</span>(payload).<span class="c-fn">to_bytes</span>();</code></pre>
+          <p>Immutable borrow this time — you are only reading.</p>
+        </div>
+      </details>
+
+      <div class="note">
+        <span class="note-label">Check yourself</span>
+        Two tests. One uploads honest content and expects <code>verify</code> to pass. The
+        other commits the hash of one page, uploads a different page of identical length, and
+        expects <code>HashMismatch</code>. If the second passes when it should fail, you are
+        hashing the wrong bytes.
+      </div>
+
+      <label class="done-row"><input type="checkbox" data-cp="4" /> Mark checkpoint 4 complete</label>
+    </section>
+
+    <!-- ============ CP 5 ============ -->
+    <section class="cp" id="cp5">
+      <div class="cp-head">
+        <span class="cp-num">05</span>
+        <div class="cp-titles">
+          <span class="cp-eyebrow">TODO 5 · close_site</span>
+          <h2>Reclaim the rent</h2>
+        </div>
+      </div>
+
+      <p>
+        <strong>What this does.</strong> Deletes the account and returns every lamport of
+        rent to the authority.
+      </p>
+      <p>
+        <strong>Why it is nearly empty.</strong> This is the shortest instruction in the
+        program, and the lesson is where the work happens. Anchor does it declaratively —
+        find the constraint in the <code>CloseSite</code> accounts struct and the body is one
+        line. Constraints are not decoration; they are where a surprising amount of an Anchor
+        program's behavior lives.
+      </p>
+
+      <div class="note">
+        <span class="note-label">Worth sitting with</span>
+        Rent is a <em>refundable deposit</em>, not a fee. You will get your ~0.045 SOL back.
+        That also means an on-chain site is permanent only as long as nobody closes it — which
+        is a real caveat on the word "permanent", and question 3 of the writeup asks you about
+        it.
+      </div>
+
+      <label class="done-row"><input type="checkbox" data-cp="5" /> Mark checkpoint 5 complete</label>
+    </section>
+
+    <!-- ============ CP 6 ============ -->
+    <section class="cp" id="cp6">
+      <div class="cp-head">
+        <span class="cp-num">06</span>
+        <div class="cp-titles">
+          <span class="cp-eyebrow">Content</span>
+          <h2>Build your page</h2>
+        </div>
+      </div>
+
+      <p>
+        Open <code>site/index.html</code> and replace it with something that is actually
+        yours. Three rules, all graded, all of them there for a reason.
+      </p>
+
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Rule</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>One file, everything inlined</td><td>A second request is a second thing that can disappear</td></tr>
+            <tr><td>Zero external requests — no CDNs, no web fonts, no remote images</td><td>A page that phones home is not on-chain in any meaningful sense</td></tr>
+            <tr><td>Under 12 KB gzipped</td><td>You are paying rent per byte, forever, out of your own wallet</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+<pre><code>npm run size
+
+<span class="c-com"># site/index.html</span>
+<span class="c-com">#   raw     2,880 bytes</span>
+<span class="c-com">#   gzipped 1,444 bytes  (12% of budget)</span>
+<span class="c-com">#   rent    0.011832 SOL</span>
+<span class="c-com">#   chunks  2 write transactions</span>
+<span class="c-com">#   PASS ready to upload</span></code></pre>
+
+      <p>
+        The checker rejects any <code>src</code>, stylesheet <code>&lt;link&gt;</code>,
+        CSS <code>url()</code> or <code>@import</code> pointing at another host. Ordinary
+        <code>&lt;a href&gt;</code> links to other sites are fine — a link is not a dependency.
+      </p>
+
+      <div class="note win">
+        <span class="note-label">Notice what compression buys you</span>
+        Gzip typically takes a hand-written page down by 70–75%. That is not just cheaper
+        rent — it is proportionally fewer <code>write_chunk</code> transactions, because both
+        costs scale with the same number. One decision, two wins. Writeup question 2 asks you
+        to put real numbers on this.
+      </div>
+
+      <label class="done-row"><input type="checkbox" data-cp="6" /> Mark checkpoint 6 complete</label>
+    </section>
+
+    <!-- ============ CP 7 ============ -->
+    <section class="cp" id="cp7">
+      <div class="cp-head">
+        <span class="cp-num">07</span>
+        <div class="cp-titles">
+          <span class="cp-eyebrow">Deploy</span>
+          <h2>Ship to devnet</h2>
+        </div>
+      </div>
+
+<pre><code>anchor deploy --provider.cluster devnet
+npx ts-node app/deploy.ts ./site/index.html portfolio --rpc=&lt;your-endpoint&gt;</code></pre>
+
+      <div class="note warn">
+        <span class="note-label">The site name must be exactly "portfolio"</span>
+        The grader derives your PDA from <code>["site", your_wallet, "portfolio"]</code>. A
+        different name means a different address and a submission that looks, to an automated
+        check, like you never deployed at all.
+      </div>
+
+      <p>
+        The script prints your site address. Now read it back through the gateway — and
+        <em>serve</em> the gateway rather than double-clicking the file, because a
+        <code>file://</code> origin breaks the RPC call.
+      </p>
+
+<pre><code>python3 -m http.server 8000
+<span class="c-com"># http://localhost:8000/app/viewer.html?account=&lt;YOUR_PDA&gt;&amp;cluster=devnet</span></code></pre>
+
+      <p>
+        The header strip shows what the gateway found: bytes stored, encoding, rent, sealed
+        state, and a sha256 check it performs <em>itself</em>, in your browser, against the
+        hash on-chain. When that reads <span style="color:var(--green);font-weight:600">verified</span>,
+        the loop is closed — your page went out as chunks, came back from a validator, and
+        proved it was unchanged.
+      </p>
+
+      <details>
+        <summary><span class="tag">Hint</span> It renders blank</summary>
+        <div class="d-body">
+          <p>Read the header strip before touching any code.</p>
+          <ul>
+            <li><code>sealed false</code> — <code>finalize</code> never ran.</li>
+            <li><code>sha256 MISMATCH</code> — your bytes are not what you uploaded. Re-read the off-by-128 hint in checkpoint 2.</li>
+            <li>Nothing at all — wrong cluster, or wrong address.</li>
+          </ul>
+        </div>
+      </details>
+
+      <label class="done-row"><input type="checkbox" data-cp="7" /> Mark checkpoint 7 complete</label>
+    </section>
+
+    <!-- ============ CP 8 ============ -->
+    <section class="cp" id="cp8">
+      <div class="cp-head">
+        <span class="cp-num">08</span>
+        <div class="cp-titles">
+          <span class="cp-eyebrow">TODO 6 · set_pointer</span>
+          <h2>The pointer</h2>
+        </div>
+      </div>
+
+      <p>
+        Now build the same thing the way production actually does it: put the bytes on IPFS
+        and keep only the <em>address</em> of those bytes on-chain.
+      </p>
+
+      <h4>This is not the lesser half</h4>
+      <p>
+        It is the dominant pattern on Solana. Every Metaplex NFT works this way — the on-chain
+        metadata account holds a <code>uri</code> and the image lives on IPFS or Arweave.
+        Token-2022's <code>TokenMetadata</code> extension has a <code>uri</code> field for
+        exactly this, and <code>MetadataPointer</code> exists to declare which account holds
+        the metadata at all. You are hand-building something you will meet again as a
+        standard extension.
+      </p>
+
+      <h4>What the on-chain record actually buys you</h4>
+      <ul>
+        <li><strong>Authority.</strong> The chain says which CID is current. Without it you need an off-chain directory, which puts back exactly the trust you were removing.</li>
+        <li><strong>Programmability.</strong> A program cannot fetch IPFS, but it can store, gate, and transfer a pointer. Ownership of the pointer becomes ownership of the site.</li>
+        <li><strong>Tamper evidence.</strong> A CID <em>is</em> a hash. Bytes either match it or they do not.</li>
+        <li><strong>Cheap mutability.</strong> A few hundred bytes of rent, and you can republish forever.</li>
+      </ul>
+
+      <h4>Requirements</h4>
+      <ol>
+        <li>Pin the <em>same</em> <code>site/index.html</code> to IPFS with Pinata's free tier. You get a CID.</li>
+        <li>Reject an empty CID — <code>EmptyCid</code> — and one longer than <code>MAX_CID_LEN</code> — <code>CidTooLong</code>.</li>
+        <li>Store the CID, the authority, and the bump.</li>
+        <li>Stamp <code>updated_slot</code> from <code>Clock::get()?.slot</code>.</li>
+      </ol>
+
+<pre><code>npx ts-node app/pointer.ts set &lt;YOUR_CID&gt; --rpc=&lt;your-endpoint&gt;
+npx ts-node app/pointer.ts get</code></pre>
+
+      <details>
+        <summary><span class="tag">Hint</span> Why this one is mutable on purpose</summary>
+        <div class="d-body">
+          <p>
+            The accounts struct uses <code>init_if_needed</code>, so a single instruction both
+            creates and updates. Call it again with a new CID and the old one is simply
+            replaced — the opposite of the site account, which you sealed shut in checkpoint 3.
+          </p>
+          <p>
+            That contrast is the point of running both halves. Writeup question 5 asks what a
+            reinitialization attack is and why this particular use is safe; the answer is in
+            what the instruction writes and what an attacker could gain by re-running it.
+          </p>
+        </div>
+      </details>
+
+      <details>
+        <summary><span class="tag">Hint</span> You do not need a name for any of this</summary>
+        <div class="d-body">
+          <p>
+            A CID is already a complete address — <code>https://&lt;CID&gt;.ipfs.dweb.link/</code>
+            works the moment Pinata gives it to you. ENS and SNS names are a convenience layer
+            that <em>stores</em> a CID; they do not produce one, and nothing here requires
+            registering a domain.
+          </p>
+          <p>
+            Prefer subdomain gateways over path gateways for HTML. A path gateway puts every
+            site on one shared origin, so all IPFS content there shares localStorage and cookies.
+          </p>
+        </div>
+      </details>
+
+      <label class="done-row"><input type="checkbox" data-cp="8" /> Mark checkpoint 8 complete</label>
+    </section>
+
+    <!-- ============ CP 9 ============ -->
+    <section class="cp" id="cp9">
+      <div class="cp-head">
+        <span class="cp-num">09</span>
+        <div class="cp-titles">
+          <span class="cp-eyebrow">Submit</span>
+          <h2>Writeup &amp; submit</h2>
+        </div>
+      </div>
+
+      <p>Add <code>WRITEUP.md</code> to your repo. A paragraph each — this is graded on thinking, not length.</p>
+
+      <ol>
+        <li><strong>Cost.</strong> Report the real rent for your site account and your pointer account, in SOL and in bytes. Rent is <code>(128 + data_size) × 3480 × 2</code> lamports. What is the ratio between them? What would a 1 MB page cost?</li>
+        <li><strong>Compression.</strong> Your page before and after gzip, and the <code>write_chunk</code> count for each. Why does one decision reduce two different costs?</li>
+        <li><strong>Mutability.</strong> The site seals; the pointer never does. What does each property buy, and when would you want the other?</li>
+        <li><strong>The bootstrap problem.</strong> Your site is on-chain, but a browser cannot read a Solana account — something must deliver the gateway over HTTP first. Does that make this pointless? Take a position. What do you still gain, and what have you <em>not</em> gained?</li>
+        <li><strong><code>init_if_needed</code>.</strong> What is a reinitialization attack, and why is this use safe?</li>
+      </ol>
+
+      <div class="note">
+        <span class="note-label">Question 4 is the one that counts</span>
+        It has no clean answer, which is why it is there. A strong response notices that the
+        gateway is generic, replaceable, and cannot lie — the hash was committed on-chain
+        before upload, and any reader re-checks it. A weak response either claims full
+        decentralization or concludes the whole exercise was theatre. Both miss what actually
+        changed hands.
+      </div>
+
+      <h4>SUBMISSION.json</h4>
+<pre><code>{
+  <span class="c-str">"name"</span>: <span class="c-str">"Your Name"</span>,
+  <span class="c-str">"wallet"</span>: <span class="c-str">"YourWalletPubkey"</span>,
+  <span class="c-str">"program_id"</span>: <span class="c-str">"YourDeployedProgramId"</span>,
+  <span class="c-str">"site_account"</span>: <span class="c-str">"ThePdaDeployPrinted"</span>,
+  <span class="c-str">"cid"</span>: <span class="c-str">"bafybeig..."</span>
+}</code></pre>
+
+      <div class="note warn">
+        <span class="note-label">Before you push</span>
+        Check <code>git status</code>. Never commit <code>target/</code>,
+        <code>node_modules/</code>, or a keypair. A committed keypair is a real incident, not
+        a style note — on mainnet it would be an expensive one.
+      </div>
+
+      <label class="done-row"><input type="checkbox" data-cp="9" /> Mark checkpoint 9 complete</label>
+    </section>
+
+    <!-- ============ SOLUTIONS ============ -->
+    <section class="cp" id="solutions">
+      <div class="cp-head">
+        <span class="cp-num" style="background:var(--green-wash);border-color:var(--green);color:var(--green)">S</span>
+        <div class="cp-titles">
+          <span class="cp-eyebrow">Reference</span>
+          <h2>Solutions</h2>
+        </div>
+      </div>
+
+      <p>
+        Try the tests first. Reading a solution before you have watched your own version fail
+        skips the part where the constraint actually lands — and the constraints are the
+        assignment.
+      </p>
+
+      <details>
+        <summary><span class="tag sol">Solution</span> TODO 1 — grow</summary>
+        <div class="d-body">
+<pre><code><span class="c-key">pub fn</span> <span class="c-fn">grow</span>(ctx: Context&lt;Grow&gt;) -&gt; Result&lt;()&gt; {
+    <span class="c-key">let</span> target = HEADER_LEN + ctx.accounts.site.total_len <span class="c-key">as</span> usize;
+    <span class="c-key">let</span> info = ctx.accounts.site.<span class="c-fn">to_account_info</span>();
+    <span class="c-key">let</span> current = info.<span class="c-fn">data_len</span>();
+    <span class="c-fn">require!</span>(current &lt; target, SiteError::AlreadyFullSize);
+
+    <span class="c-key">let</span> new_len = std::cmp::<span class="c-fn">min</span>(target, current + MAX_PERMITTED_DATA_INCREASE);
+
+    <span class="c-key">let</span> rent = Rent::<span class="c-fn">get</span>()?;
+    <span class="c-key">let</span> required = rent.<span class="c-fn">minimum_balance</span>(new_len);
+    <span class="c-key">let</span> held = info.<span class="c-fn">lamports</span>();
+    <span class="c-key">if</span> required &gt; held {
+        <span class="c-fn">invoke</span>(
+            &amp;system_instruction::<span class="c-fn">transfer</span>(ctx.accounts.payer.key, info.key, required - held),
+            &amp;[
+                ctx.accounts.payer.<span class="c-fn">to_account_info</span>(),
+                info.<span class="c-fn">clone</span>(),
+                ctx.accounts.system_program.<span class="c-fn">to_account_info</span>(),
+            ],
+        )?;
+    }
+
+    info.<span class="c-fn">resize</span>(new_len)?;
+    <span class="c-fn">Ok</span>(())
+}</code></pre>
+        </div>
+      </details>
+
+      <details>
+        <summary><span class="tag sol">Solution</span> TODO 2 — write_chunk</summary>
+        <div class="d-body">
+<pre><code><span class="c-key">pub fn</span> <span class="c-fn">write_chunk</span>(ctx: Context&lt;WriteChunk&gt;, offset: <span class="c-key">u32</span>, data: Vec&lt;<span class="c-key">u8</span>&gt;) -&gt; Result&lt;()&gt; {
+    <span class="c-fn">require!</span>(!ctx.accounts.site.finalized, SiteError::AlreadyFinalized);
+    <span class="c-fn">require!</span>(!data.<span class="c-fn">is_empty</span>(), SiteError::EmptyChunk);
+
+    <span class="c-key">let</span> start = offset <span class="c-key">as</span> usize;
+    <span class="c-key">let</span> end = start.<span class="c-fn">checked_add</span>(data.<span class="c-fn">len</span>()).<span class="c-fn">ok_or</span>(SiteError::OutOfBounds)?;
+    <span class="c-fn">require!</span>(end &lt;= ctx.accounts.site.total_len <span class="c-key">as</span> usize, SiteError::OutOfBounds);
+
+    <span class="c-key">let</span> info = ctx.accounts.site.<span class="c-fn">to_account_info</span>();
+    <span class="c-fn">require!</span>(HEADER_LEN + end &lt;= info.<span class="c-fn">data_len</span>(), SiteError::NotGrownYet);
+
+    {
+        <span class="c-key">let</span> <span class="c-key">mut</span> raw = info.<span class="c-fn">try_borrow_mut_data</span>()?;
+        raw[HEADER_LEN + start..HEADER_LEN + end].<span class="c-fn">copy_from_slice</span>(&amp;data);
+    }
+
+    <span class="c-key">let</span> site = &amp;<span class="c-key">mut</span> ctx.accounts.site;
+    <span class="c-key">if</span> end <span class="c-key">as</span> <span class="c-key">u32</span> &gt; site.written_len {
+        site.written_len = end <span class="c-key">as</span> <span class="c-key">u32</span>;
+    }
+    <span class="c-fn">Ok</span>(())
+}</code></pre>
+        </div>
+      </details>
+
+      <details>
+        <summary><span class="tag sol">Solution</span> TODO 3 — finalize</summary>
+        <div class="d-body">
+<pre><code><span class="c-key">pub fn</span> <span class="c-fn">finalize</span>(ctx: Context&lt;Finalize&gt;) -&gt; Result&lt;()&gt; {
+    <span class="c-key">let</span> site = &amp;<span class="c-key">mut</span> ctx.accounts.site;
+    <span class="c-fn">require!</span>(!site.finalized, SiteError::AlreadyFinalized);
+    <span class="c-fn">require!</span>(site.written_len == site.total_len, SiteError::IncompleteUpload);
+    site.finalized = <span class="c-key">true</span>;
+    <span class="c-fn">Ok</span>(())
+}</code></pre>
+        </div>
+      </details>
+
+      <details>
+        <summary><span class="tag sol">Solution</span> TODO 4 — verify</summary>
+        <div class="d-body">
+<pre><code><span class="c-key">pub fn</span> <span class="c-fn">verify</span>(ctx: Context&lt;Verify&gt;) -&gt; Result&lt;()&gt; {
+    <span class="c-key">let</span> site = &amp;ctx.accounts.site;
+    <span class="c-key">let</span> info = site.<span class="c-fn">to_account_info</span>();
+    <span class="c-key">let</span> raw = info.<span class="c-fn">try_borrow_data</span>()?;
+    <span class="c-key">let</span> payload = &amp;raw[HEADER_LEN..HEADER_LEN + site.total_len <span class="c-key">as</span> usize];
+    <span class="c-key">let</span> computed = <span class="c-fn">hash</span>(payload).<span class="c-fn">to_bytes</span>();
+    <span class="c-fn">require!</span>(computed == site.content_hash, SiteError::HashMismatch);
+    <span class="c-fn">Ok</span>(())
+}</code></pre>
+        </div>
+      </details>
+
+      <details>
+        <summary><span class="tag sol">Solution</span> TODO 5 — close_site</summary>
+        <div class="d-body">
+<pre><code><span class="c-key">pub fn</span> <span class="c-fn">close_site</span>(_ctx: Context&lt;CloseSite&gt;) -&gt; Result&lt;()&gt; {
+    <span class="c-com">// The `close = authority` constraint on CloseSite does the work.</span>
+    <span class="c-fn">Ok</span>(())
+}</code></pre>
+        </div>
+      </details>
+
+      <details>
+        <summary><span class="tag sol">Solution</span> TODO 6 — set_pointer</summary>
+        <div class="d-body">
+<pre><code><span class="c-key">pub fn</span> <span class="c-fn">set_pointer</span>(ctx: Context&lt;SetPointer&gt;, cid: String) -&gt; Result&lt;()&gt; {
+    <span class="c-fn">require!</span>(!cid.<span class="c-fn">is_empty</span>(), SiteError::EmptyCid);
+    <span class="c-fn">require!</span>(cid.<span class="c-fn">len</span>() &lt;= MAX_CID_LEN, SiteError::CidTooLong);
+
+    <span class="c-key">let</span> pointer = &amp;<span class="c-key">mut</span> ctx.accounts.pointer;
+    pointer.authority = ctx.accounts.authority.<span class="c-fn">key</span>();
+    pointer.cid = cid;
+    pointer.updated_slot = Clock::<span class="c-fn">get</span>()?.slot;
+    pointer.bump = ctx.bumps.pointer;
+    <span class="c-fn">Ok</span>(())
+}</code></pre>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============ TROUBLESHOOTING ============ -->
+    <section class="cp" id="trouble">
+      <div class="cp-head">
+        <span class="cp-num" style="background:var(--amber-wash);border-color:var(--amber);color:var(--amber)">?</span>
+        <div class="cp-titles">
+          <span class="cp-eyebrow">When it breaks</span>
+          <h2>Troubleshooting</h2>
+        </div>
+      </div>
+
+      <p>Ranked by how often it actually happens.</p>
+
+      <details>
+        <summary><span class="tag">Error</span> 'site' does not exist in type 'ResolvedAccounts&lt;…&gt;'</summary>
+        <div class="d-body">
+          <p>
+            Anchor 0.30+ changed <code>.accounts()</code> to accept only accounts it
+            <em>cannot</em> resolve itself. Your site PDA has declared seeds and
+            <code>systemProgram</code> is a known address, so both get stripped from the
+            accepted type. Use <code>.accountsPartial()</code> — same behavior, no filter.
+            The provided scripts already do.
+          </p>
+        </div>
+      </details>
+
+      <details>
+        <summary><span class="tag">Error</span> 429 Too Many Requests</summary>
+        <div class="d-body">
+          <p>
+            The public devnet endpoint, shared by everyone. Pass <code>--rpc=&lt;url&gt;</code>
+            with your own free endpoint. This is why checkpoint 0 tells you to get one before
+            writing code.
+          </p>
+          <p>
+            If it hits during <code>verify</code> after the upload succeeded, your site is
+            fine — <code>verify</code> is confirmation, not deployment. Re-run the command.
+          </p>
+        </div>
+      </details>
+
+      <details>
+        <summary><span class="tag">Error</span> feature `edition2024` is required</summary>
+        <div class="d-body">
+          <p>
+            Your Rust is older than the dependency tree. <code>rustup update stable</code>
+            first. If you cannot update, run <code>./scripts/pin-for-old-toolchain.sh</code>,
+            which pins the six crates that moved to edition 2024.
+          </p>
+          <p>
+            Worth understanding rather than just running: the crate the error names is usually
+            not the crate that chose the version. Walk up with <code>cargo tree -i &lt;crate&gt;</code>
+            to find who did.
+          </p>
+        </div>
+      </details>
+
+      <details>
+        <summary><span class="tag">Error</span> No such file or directory (os error 2)</summary>
+        <div class="d-body">
+          <p>
+            Anchor failed to spawn a binary and will not tell you which one. Run:
+          </p>
+<pre><code>which rustc cargo solana cargo-build-sbf avm agave-install</code></pre>
+          <p>
+            Whichever comes back empty is your answer. Install Rust through rustup, not
+            Homebrew — a brew Rust lands somewhere Anchor does not look.
+          </p>
+        </div>
+      </details>
+
+      <details>
+        <summary><span class="tag">Error</span> Everything confirms but the hash is wrong</summary>
+        <div class="d-body">
+          <p>
+            Almost always <code>write_chunk</code> writing at <code>offset</code> instead of
+            <code>HEADER_LEN + offset</code>. Every transaction succeeds, the account fills
+            up, and the first 128 bytes of your page have overwritten the header while the
+            tail runs off the end.
+          </p>
+        </div>
+      </details>
+    </section>
+
+    <p class="foot">
+      Assignment 04 · deploy on devnet · rent is refundable · never commit a keypair
+    </p>
+
+  </article>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var KEY = "onchain-site-progress-v1";
+  var TOTAL = 10;
+
+  function read() {
+    try {
+      var v = window.localStorage.getItem(KEY);
+      return v ? JSON.parse(v) : {};
+    } catch (e) { return {}; }
+  }
+  function write(state) {
+    try { window.localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  var boxes = Array.prototype.slice.call(document.querySelectorAll(".done-row input[data-cp]"));
+  var items = Array.prototype.slice.call(document.querySelectorAll("#spine li"));
+  var tally = document.getElementById("tally");
+  var state = read();
+
+  function paint() {
+    var done = 0;
+    boxes.forEach(function (box) {
+      var i = Number(box.dataset.cp);
+      var on = !!state[i];
+      box.checked = on;
+      if (items[i]) items[i].classList.toggle("is-done", on);
+      if (on) done++;
+    });
+    if (tally) tally.textContent = done + " of " + TOTAL + " done";
+  }
+
+  boxes.forEach(function (box) {
+    box.addEventListener("change", function () {
+      state[Number(box.dataset.cp)] = box.checked;
+      write(state);
+      paint();
+    });
+  });
+
+  var reset = document.getElementById("reset");
+  if (reset) {
+    reset.addEventListener("click", function () {
+      state = {};
+      write(state);
+      paint();
+    });
+  }
+
+  paint();
+
+  // Highlight the checkpoint currently in view.
+  var links = Array.prototype.slice.call(document.querySelectorAll("#spine a"));
+  var sections = links
+    .map(function (a) { return document.querySelector(a.getAttribute("href")); })
+    .filter(Boolean);
+
+  if ("IntersectionObserver" in window && sections.length) {
+    var seen = {};
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { seen[en.target.id] = en.isIntersecting; });
+      var current = null;
+      for (var i = 0; i < sections.length; i++) {
+        if (seen[sections[i].id]) { current = sections[i].id; break; }
+      }
+      links.forEach(function (a) {
+        a.setAttribute("aria-current", a.getAttribute("href") === "#" + current ? "true" : "false");
+      });
+    }, { rootMargin: "-8% 0px -75% 0px" });
+    sections.forEach(function (s) { obs.observe(s); });
+  }
+})();
+</script>
+
+</body>
+</html>
