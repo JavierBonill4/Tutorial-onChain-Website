@@ -684,7 +684,7 @@ anchor test   <span class="c-com"># most tests fail — that is your worklist</s
       <h4>The account layout</h4>
       <p>
         Bytes 0–128 are a fixed header. Everything after byte 128 is the website itself.
-        Do not move these fields — the gateway and the grader read them at fixed offsets.
+        Do not move these fields — the gateway and the instructor read them at fixed offsets.
       </p>
 
       <div class="tablewrap">
@@ -717,6 +717,10 @@ anchor test   <span class="c-com"># most tests fail — that is your worklist</s
         </div>
       </div>
 
+      <p>
+        <strong>Open programs/onchain-site/src/lib.rs</strong> This is where you will find checkpoint 1-5 and checkpoint 8
+
+      </p>
       <p>
         <strong>What this does.</strong> <code>initialize</code> created your PDA with exactly
         128 bytes — just the header, no room for a page. This instruction stretches it
@@ -1028,7 +1032,7 @@ anchor test   <span class="c-com"># most tests fail — that is your worklist</s
 
       <p>
         Open <code>site/index.html</code> and replace it with something that is actually
-        yours. Three rules, all graded, all of them there for a reason.
+        yours. Three rules, all of them there for a reason.
       </p>
 
       <div class="tablewrap">
@@ -1083,7 +1087,7 @@ npx ts-node app/deploy.ts ./site/index.html portfolio --rpc=&lt;your-endpoint&gt
 
       <div class="note warn">
         <span class="note-label">The site name must be exactly "portfolio"</span>
-        The grader derives your PDA from <code>["site", your_wallet, "portfolio"]</code>. A
+        The Instructor derives your PDA from <code>["site", your_wallet, "portfolio"]</code>. A
         different name means a different address and a submission that looks, to an automated
         check, like you never deployed at all.
       </div>
@@ -1215,7 +1219,7 @@ npx ts-node app/pointer.ts get</code></pre>
         </div>
       </div>
 
-      <p>Add <code>WRITEUP.md</code> to your repo. A paragraph each — this is graded on thinking, not length.</p>
+      <p>~Optional~ Add <code>WRITEUP.md</code> to your repo. A paragraph each to show your thinking.</p>
 
       <ol>
         <li><strong>Cost.</strong> Report the real rent for your site account and your pointer account, in SOL and in bytes. Rent is <code>(128 + data_size) × 3480 × 2</code> lamports. What is the ratio between them? What would a 1 MB page cost?</li>
@@ -1233,15 +1237,6 @@ npx ts-node app/pointer.ts get</code></pre>
         decentralization or concludes the whole exercise was theatre. Both miss what actually
         changed hands.
       </div>
-
-      <h4>SUBMISSION.json</h4>
-<pre><code>{
-  <span class="c-str">"name"</span>: <span class="c-str">"Your Name"</span>,
-  <span class="c-str">"wallet"</span>: <span class="c-str">"YourWalletPubkey"</span>,
-  <span class="c-str">"program_id"</span>: <span class="c-str">"YourDeployedProgramId"</span>,
-  <span class="c-str">"site_account"</span>: <span class="c-str">"ThePdaDeployPrinted"</span>,
-  <span class="c-str">"cid"</span>: <span class="c-str">"bafybeig..."</span>
-}</code></pre>
 
       <div class="note warn">
         <span class="note-label">Before you push</span>
