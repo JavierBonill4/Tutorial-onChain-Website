@@ -1086,21 +1086,26 @@ npx ts-node app/deploy.ts ./site/index.html portfolio --rpc=&lt;your-endpoint&gt
       </div>
 
       <p>
-        The script prints your site address. Now read it back through the gateway — and
-        <em>serve</em> the gateway rather than double-clicking the file, because a
-        <code>file://</code> origin breaks the RPC call.
+        The script prints your site address. If you see this outcome you are done:
       </p>
-
-<pre><code>python3 -m http.server 8000
-<span class="c-com"># http://localhost:8000/app/viewer.html?account=&lt;YOUR_PDA&gt;&amp;cluster=devnet</span></code></pre>
-
-      <p>
-        The header strip shows what the gateway found: bytes stored, encoding, rent, sealed
-        state, and a sha256 check it performs <em>itself</em>, in your browser, against the
-        hash on-chain. When that reads <span style="color:var(--green);font-weight:600">verified</span>,
-        the loop is closed — your page went out as chunks, came back from a validator, and
-        proved it was unchanged.
-      </p>
+<pre><code>authority : G6Pw6HLuwBRqYQpEUHtWYsobqt3bnfwwYzyyRrnSha3M
+  site PDA  : 8wjAqvjr3JKyE1vLpqsESVestTE1PZFPXbXpnqUFV8MW
+  cluster   : devnet
+  
+  source    : ./site/index.html  3,139 bytes
+  stored    : 1,606 bytes (gzip, 48.8% smaller)
+  account   : 1,734 bytes
+  rent      : 0.012960 SOL (refundable)
+  txs       : 1 init + 1 grow + 2 write + 1 finalize + 1 verify
+  
+  initialized
+  grow -> 1,734 / 1,734
+  wrote 2/2 chunks
+  finalized
+  hash verified on-chain
+  
+  live at: app/viewer.html?account=8wjAqvjr3JKyE1vLpqsESVestTE1PZFPXbXpnqUFV8MW&cluster=devnet</code></pre>
+        <p>Save the site PDA and post it on our discord, or go to <a href="https://bafkreigicogc7ogr5ao4rxwcb3jub35ummmuqfioenxrwdpa7h56forecu.ipfs.inbrowser.link/">Site-viewer</a> and paste your site PDA to view</p>
 
       <details>
         <summary><span class="tag">Hint</span> It renders blank</summary>
