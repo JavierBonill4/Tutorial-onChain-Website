@@ -605,6 +605,13 @@ td.num { font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular
 
     <!-- ============ INTRO ============ -->
     <section>
+      <h3 style="margin-top:0">The repository</h3>
+      <p>
+        Clone this repo to get started on the project: <a href="https://github.com/JavierBonill4/On-chain-webapp-tutorial">github-on-chain-webapp-tutorial</a>
+        Start with the README.md and 
+      
+      </p>
+
       <h3 style="margin-top:0">Why this assignment exists</h3>
       <p>
         Storing a website on-chain is not what you would ship. That is the point.
@@ -642,9 +649,6 @@ td.num { font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular
       </div>
 
       <p>
-        First clone the repo from here: <a href="https://github.com/JavierBonill4/On-chain-webapp-tutorial">github-on-chain-webapp-tutorial</a>
-      </p>
-      <p>
         Get the toolchain current before you write a line of Rust. Most first-day
         failures in this assignment are toolchain age, not code.
       </p>
@@ -672,6 +676,10 @@ anchor test   <span class="c-com"># most tests fail — that is your worklist</s
         URL handy. The public endpoint rate-limits hard and will drop you with a 429
         halfway through an upload, where it looks exactly like a bug in your program.
         Every script here takes <code>--rpc=&lt;url&gt;</code>.
+        <span class="note-label">If you chose to skip</span>
+        Any command running with <code>--rpc=&lt;url&gt;</code> run without that flag. 
+        you might hit troubles with hitting rate limits on checkpoint 7, if you receive 
+        a site PDA, ignore error messages as deployment was succesful
       </div>
 
       <p>
